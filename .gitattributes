@@ -1,0 +1,2 @@
+# 글플러스: 빌드 산출물(WASM 번들)은 체크섬 검증 대상이라 줄바꿈 변환을 하지 않는다.
+apps/studio-host/vendor/rhwp-core/** -text

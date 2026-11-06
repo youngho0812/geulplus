@@ -130,7 +130,8 @@ test('HOP product info keeps the upstream rhwp version and adds HOP version sepa
   assert.match(viteConfig, /__HOP_VERSION__:\s*JSON\.stringify\(desktopConfig\.version\)/);
   assert.match(aboutDialog, /extends UpstreamAboutDialog/);
   assert.match(aboutDialog, /super\.createBody\(\)/);
-  assert.match(aboutDialog, /HOP \$\{__HOP_VERSION__\}/);
+  // 글플러스: 제품명은 app-brand.ts의 APP_DISPLAY_NAME으로 표시한다.
+  assert.match(aboutDialog, /\$\{APP_DISPLAY_NAME\} \$\{__HOP_VERSION__\}/);
 });
 
 test('desktop release tests and platform builds use the upstream Rust toolchain', async () => {

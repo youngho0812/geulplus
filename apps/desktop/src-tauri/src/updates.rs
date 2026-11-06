@@ -16,9 +16,6 @@ pub enum UpdateNoticeState {
     Idle,
 }
 
-#[derive(Default)]
-pub struct UpdateManagerState;
-
 pub fn install_startup_update_check(_app: &AppHandle) {}
 
 #[tauri::command]

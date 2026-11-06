@@ -15,7 +15,7 @@ test('production studio code reaches rhwp internals only through the upstream ad
   const manifest = JSON.parse(await readFile(join(repoRoot, 'config/rhwp-studio-overrides.json'), 'utf8'));
   const overrideIds = new Set(manifest.overrides.map((entry) => entry.id));
   for (const file of await typescriptFiles(studioRoot)) {
-    const relativePath = relative(studioRoot, file);
+    const relativePath = relative(studioRoot, file).replaceAll('\\', '/');
     if (relativePath.startsWith('upstream/') || relativePath.endsWith('.test.ts')) continue;
     const source = await readFile(file, 'utf8');
     if (source.includes("'@upstream/") || source.includes('"@upstream/')) {
@@ -181,8 +181,12 @@ test('HOP keeps the pinned upstream style toolbar markup contract', async () => 
     'utf8',
   );
 
+  // 글플러스: 글자색 팔레트(text-color-palette.ts)를 위해 추가한 마크업만 걷어내고 비교한다.
+  const studioToolbar = extractStyleToolbar(studioHtml)
+    .replace('<span id="text-color-dropdown" class="sb-color-wrap sb-dropdown">', '<span class="sb-color-wrap">')
+    .replace(/\n\s*<div id="text-color-palette" class="sb-hl-palette sb-tc-palette"><\/div>/, '');
   assert.equal(
-    extractStyleToolbar(studioHtml),
+    studioToolbar,
     extractStyleToolbar(upstreamHtml),
     'HOP style toolbar markup must stay aligned with pinned rhwp CSS',
   );
@@ -213,6 +217,7 @@ function localModuleExists(moduleId) {
 }
 
 function extractStyleToolbar(html) {
+  html = html.replace(/\r\n/g, '\n');
   const match = html.match(
     /<!-- 서식 도구 모음 \(style bar\) -->\s*(<div id="style-bar">[\s\S]*<\/div>)\s*(?:<\/header>\s*)?<!-- 에디터 영역 \(눈금자 포함\) -->/,
   );
