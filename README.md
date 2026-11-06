@@ -1,70 +1,120 @@
-# HOP
+<p align="center">
+  <img src="assets/logo/logo-256.png" alt="글플러스 로고" width="128" />
+</p>
 
-**HOP is Open HWP**
+<h1 align="center">글플러스</h1>
 
-HOP는 HWP/HWPX 문서를 보고 편집할 수 있는 오픈소스 macOS, Windows, Linux용 데스크탑 앱입니다.
+<p align="center">
+  <b>HWP·HWPX 문서를 열고, 고치고, HWPX로 저장하는 무료 편집기</b>
+</p>
 
-문서 파싱과 렌더링의 기반은 [rhwp](https://github.com/edwardkim/rhwp)를 사용합니다. HOP는 그 위에 얇게 껍데기를 씌운 앱입니다. rhwp가 제공하는 기능을 바탕으로 파일 열기, 저장, PDF 내보내기, 인쇄, 파일 연결 같은 OS 통합 기능을 제공합니다.
+---
 
-![HOP editor](assets/screenshots/hop-editor.webp)
+## 글플러스는 이런 프로그램이에요
 
-## 할 수 있는 일
+- 한글 문서(**.hwp**, **.hwpx**)를 **열어서 보고 고칠 수 있어요.**
+- 고친 문서를 **HWPX로 저장**할 수 있어요. (HWP 저장, PDF 내보내기도 돼요)
+- 한컴오피스가 없는 PC에서도 쓸 수 있어요.
+- Windows용이에요.
 
-현재 HOP는 다음 흐름을 지원합니다.
+## 설치하기
 
-* HWP/HWPX 문서 열기
-* HWP 문서 저장, 다른 이름으로 저장
-* PDF로 내보내기
-* 인쇄 다이얼로그 열기
-* 파일 드래그 앤 드롭으로 열기
-* `.hwp`, `.hwpx` 파일 연결
-* 여러 창에서 문서 열기
+1. [Releases](../../releases) 페이지에서 **`GeulPlus_1.0.0_x64-setup.exe`** 를 받아요.
+2. 받은 파일을 더블클릭해서 설치해요.
+3. 시작 메뉴에서 **글플러스**를 찾아 실행해요.
 
-## 다운로드
+> **"Windows의 PC 보호" 창이 뜨면?**
+> 아직 코드 서명을 하지 않아서 나오는 안내예요.
+> **추가 정보 → 실행**을 누르면 설치돼요.
 
-최신 릴리즈는 아래 링크에서 받을 수 있습니다.
+## 사용법
 
-* [macOS Apple Silicon (.dmg)](https://github.com/golbin/hop/releases/latest/download/HOP-macos-arm64.dmg)
-* [macOS Intel (.dmg)](https://github.com/golbin/hop/releases/latest/download/HOP-macos-x64.dmg)
-* [Windows x64 (.msi)](https://github.com/golbin/hop/releases/latest/download/HOP-windows-x64.msi)
-* [Linux x64 (.deb, Ubuntu/Debian 계열 권장)](https://github.com/golbin/hop/releases/latest/download/HOP-linux-x64.deb)
-* [Linux x64 (.rpm, Fedora/openSUSE 계열)](https://github.com/golbin/hop/releases/latest/download/HOP-linux-x64.rpm)
-* [Linux x64 (AppImage, portable)](https://github.com/golbin/hop/releases/latest/download/HOP-linux-x64.AppImage)
-* [Linux arm64 (.deb, Ubuntu/Debian 계열)](https://github.com/golbin/hop/releases/latest/download/HOP-linux-arm64.deb)
-* [Arch Linux AUR (`hop-openhwp-bin`)](https://aur.archlinux.org/packages/hop-openhwp-bin)
+### 문서 열기
+- 글플러스를 실행하고 **파일 → 열기**(`Ctrl+O`)로 문서를 골라요.
+- 한컴오피스가 기본 프로그램이라면, 파일을 **오른쪽 클릭 → 연결 프로그램 → 글플러스**로도 열 수 있어요.
 
-macOS 빌드는 signed/notarized `.dmg`입니다. Homebrew를 통해서 설치할 수도 있습니다. Homebrew 패키지는 [daeho-ro](https://github.com/daeho-ro)님이 올려주셨습니다.
+### 고치기
+- 일반 워드프로세서처럼 글을 쓰고 지우면 돼요.
+- **글자색**: 글자색 버튼(**가▾**)을 누르면 자주 쓰는 색이 나와요.
+  최근에 쓴 색은 아래쪽에 모여요. 원하는 색이 없으면 **다른 색...** 을 눌러요.
+- 실행 취소는 `Ctrl+Z`예요.
 
-```sh
-brew install hop
+### 저장하기
+| 하고 싶은 것 | 방법 |
+|---|---|
+| HWPX로 저장 | **파일 → 다른 이름으로 저장** → 형식에서 HWPX 선택 |
+| HWP로 저장 | **파일 → 다른 이름으로 저장** → 형식에서 HWP 선택 |
+| PDF로 만들기 | **파일 → PDF 내보내기** |
+
+> **원본 HWPX 파일에 바로 덮어쓰기는 아직 막아 두었어요.**
+> 혹시 모를 문서 손상을 막기 위해서예요. 항상 **새 이름으로 저장**해 주세요.
+> 저장할 때 일부 내용이 옮겨지지 않는 경우에는 **경고 창**이 먼저 떠요.
+
+## 알아두면 좋은 점
+
+- 복잡한 문서(특수 개체, 일부 서식)는 한컴오피스와 조금 다르게 보일 수 있어요.
+- 중요한 문서는 저장한 뒤 **한컴오피스에서도 한 번 열어 확인**하는 걸 추천해요.
+- 자동 업데이트는 없어요. 새 버전은 Releases 페이지에서 받아 주세요.
+
+## 문제가 생기면
+
+[Issues](../../issues)에 남겨 주세요. 아래 내용을 같이 적어 주시면 빨리 고칠 수 있어요.
+- 어떤 작업을 하다가 생겼는지
+- 문제가 생긴 문서 (개인정보가 없는 문서만 올려 주세요)
+- 화면 캡처
+
+---
+
+## 개발자용
+
+### 필요한 도구
+- Git, Node.js 24, pnpm
+- Rust 1.93.1 (`rustup toolchain install 1.93.1 --component rustfmt clippy --target wasm32-unknown-unknown`)
+- Visual Studio 2022 Build Tools (C++), WebView2
+
+### 소스 받기
+```bash
+git clone --recurse-submodules https://github.com/youngho0812/geulplus.git
+cd geulplus
+pnpm install --frozen-lockfile
 ```
 
-전체 릴리즈는 [GitHub Releases](https://github.com/golbin/hop/releases)에서 확인할 수 있습니다.
+### 자주 쓰는 명령
+| 명령 | 하는 일 |
+|---|---|
+| `pnpm --filter hop-desktop dev` | 개발 모드로 실행 |
+| `pnpm run test:studio` | 화면(TypeScript) 테스트 |
+| `pnpm run test:desktop` | Rust 테스트 |
+| `pnpm run clippy:desktop` | Rust 코드 검사 |
+| `pnpm --filter hop-desktop tauri build` | 설치 파일 만들기 → `apps/desktop/src-tauri/target/release/bundle/` |
 
-## 설치 유의사항
-
-### Windows
-
-Windows 빌드는 아직 서명되지 않아 Edge나 Windows SmartScreen에서 "일반적으로 다운로드되지 않습니다" 또는 실행 경고가 뜰 수 있습니다. 다운로드 항목의 `...` 메뉴에서 `유지`를 선택한 뒤 다운로드할 수 있습니다.
-
-### Linux
-
-Linux에서는 한글 IME와 WebKitGTK 런타임 안정성을 위해 배포판에 맞는 네이티브 패키지를 우선 사용해 주세요. arm64 Linux는 Ubuntu/Debian 계열 `.deb`를 먼저 지원합니다. AppImage는 portable 실행이 필요할 때만 권장하며, 일부 Wayland/IME 환경에서는 한영 전환이나 창 표시가 불안정할 수 있습니다.
-
-Arch, CachyOS, EndeavourOS 계열은 AUR의 `hop-openhwp-bin` 패키지로 설치할 수 있습니다. 이 패키지는 [seunghun-kim](https://github.com/seunghun-kim)님이 올려주셨습니다.
-
-```sh
-yay -S hop-openhwp-bin
-# 또는
-paru -S hop-openhwp-bin
+### 폴더 구성
+```
+apps/desktop/src-tauri/   데스크톱 앱 (Rust): 파일 저장·검증, 메뉴, 창
+apps/studio-host/         화면 (TypeScript): 편집 화면, 툴바, 저장 흐름
+third_party/rhwp/         문서 엔진 (원본 그대로 사용, 수정하지 않음)
+assets/                   아이콘, 폰트
 ```
 
-## 개발하기
+- 화면에 보이는 프로그램 이름은 `apps/studio-host/src/core/app-brand.ts` 한 곳에서 바꿀 수 있어요.
+- 자세한 개발 규칙은 [AGENTS.md](AGENTS.md)를 참고하세요.
 
-개발 환경 준비, 실행 명령, 프로젝트 구조, `rhwp`와의 관계는 [개발 문서](docs/DEVELOPMENT.md)에 정리해 두었습니다.
+---
 
-## Credits
+## 만든 바탕과 라이선스
 
-HOP는 [rhwp](https://github.com/edwardkim/rhwp)를 기반으로 합니다. HWP 엔진을 공개해 주신 개발자분께 감사드립니다.
+글플러스는 아래 오픈소스를 바탕으로 만들었어요. 좋은 프로젝트를 공개해 주신 분께 감사드려요.
 
-License: MIT
+| 프로젝트 | 역할 | 라이선스 |
+|---|---|---|
+| [HOP](https://github.com/golbin/hop) | 데스크톱 앱의 뼈대 | MIT |
+| [rhwp](https://github.com/edwardkim/rhwp) | HWP·HWPX 읽기·그리기·저장 엔진 | MIT |
+
+글플러스에서 추가한 기능: **HWPX 저장**, **글자색 팔레트**, 이름·아이콘 변경 등
+
+- 원본 저작권 고지와 포함된 폰트·라이브러리 라이선스는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 있어요.
+- 원본 HOP 안내문은 [docs/HOP_ORIGINAL_README.md](docs/HOP_ORIGINAL_README.md)에 보관했어요.
+
+본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+"한글", "한컴", "HWP", "HWPX"는 주식회사 한글과컴퓨터의 등록 상표이며,
+글플러스는 한글과컴퓨터와 제휴, 후원, 승인 관계가 없는 독립적인 프로그램입니다.

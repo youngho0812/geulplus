@@ -8,6 +8,11 @@ use crate::state::AppState;
 
 const UPDATE_STATE_EVENT: &str = "hop-update-state";
 
+/// 자동 업데이트 확인 여부.
+/// tauri.conf.json의 updater 주소가 원본 HOP 배포처를 가리키므로, 글플러스 자체 배포처가
+/// 준비될 때까지 꺼 둔다. (켜 두면 원본 HOP 새 버전으로 덮어써질 수 있음)
+const STARTUP_UPDATE_CHECK_ENABLED: bool = false;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Default)]
 #[serde(tag = "status", rename_all = "camelCase")]
@@ -111,6 +116,11 @@ impl UpdateManagerState {
 }
 
 pub fn install_startup_update_check(app: &AppHandle) {
+    if !STARTUP_UPDATE_CHECK_ENABLED {
+        let _ = app;
+        return;
+    }
+
     #[cfg(debug_assertions)]
     {
         let _ = app;

@@ -18,5 +18,3 @@ HOP는 studio host에서 fallback으로 사용할 수 있는 재배포 가능 �
 | `D2Coding-Regular.woff2` | SIL OFL 1.1 | Naver D2 Coding |
 | `LatinModernMath-Regular.woff2` | GUST Font License | Latin Modern Math |
 | `SpoqaHanSans-Regular.woff2` | SIL OFL 1.1 | Spoqa Han Sans |
-| `Cafe24*.woff2` | Cafe24 무료 폰트 라이선스 | Cafe24 |
-| `Happiness*.woff2` | 행복고흥 무료 폰트 라이선스 | 행복고흥 |

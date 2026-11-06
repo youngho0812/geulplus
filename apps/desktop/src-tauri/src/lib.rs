@@ -24,13 +24,13 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use commands::{
     cancel_app_quit, check_external_modification, clear_recent_documents, close_document,
-    commit_staged_hwp_save, create_document, create_editor_window, desktop_platform,
-    destroy_current_window, export_pdf, export_pdf_from_hwp_path, list_local_fonts,
-    list_recent_documents, mark_document_dirty, mutate_document, note_finder_recent_document,
-    open_document_tracking, prepare_document_open, prepare_staged_hwp_pdf_export,
-    prepare_staged_hwp_save, print_webview, query_document, read_local_font,
-    record_recent_document, render_document_preview, render_page_svg, reveal_in_folder,
-    take_pending_open_paths,
+    commit_staged_hwp_save, commit_staged_hwpx_save, create_document, create_editor_window,
+    desktop_platform, destroy_current_window, export_pdf, export_pdf_from_hwp_path,
+    list_local_fonts, list_recent_documents, mark_document_dirty, mutate_document,
+    note_finder_recent_document, open_document_tracking, prepare_document_open,
+    prepare_staged_hwp_pdf_export, prepare_staged_hwp_save, prepare_staged_hwpx_save,
+    print_webview, query_document, read_local_font, record_recent_document,
+    render_document_preview, render_page_svg, reveal_in_folder, take_pending_open_paths,
 };
 use state::AppState;
 use updates::{get_update_state, restart_to_apply_update, start_update_install};
@@ -99,6 +99,8 @@ pub fn run() {
             prepare_staged_hwp_pdf_export,
             prepare_staged_hwp_save,
             commit_staged_hwp_save,
+            prepare_staged_hwpx_save,
+            commit_staged_hwpx_save,
             check_external_modification,
             take_pending_open_paths,
             reveal_in_folder,
@@ -112,7 +114,7 @@ pub fn run() {
             restart_to_apply_update,
         ])
         .build(tauri::generate_context!())
-        .expect("failed to build HOP desktop app");
+        .expect("failed to build GeulPlus desktop app");
 
     app.run(|_app, _event| {
         #[cfg(target_os = "macos")]
@@ -266,7 +268,7 @@ mod tests {
         let cwd = dir.path().to_string_lossy();
         let paths = document_paths_from_args(
             &[
-                dir.path().join("HOP.exe").to_string_lossy().to_string(),
+                dir.path().join("GeulPlus.exe").to_string_lossy().to_string(),
                 "first.hwp".to_string(),
                 "notes.txt".to_string(),
                 "second.HWPX".to_string(),

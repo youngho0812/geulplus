@@ -9,7 +9,7 @@
 	<key>CFBundleExecutable</key>
 	<string>HopQuickLookThumbnail</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.golbin.hop.quicklook.thumbnail</string>
+	<string>kr.geulplus.app.quicklook.thumbnail</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -28,8 +28,8 @@
 		<dict>
 			<key>QLSupportedContentTypes</key>
 			<array>
-				<string>net.golbin.hop.hwp</string>
-				<string>net.golbin.hop.hwpx</string>
+				<string>kr.geulplus.app.hwp</string>
+				<string>kr.geulplus.app.hwpx</string>
 				<string>com.hancom.hwp</string>
 				<string>com.hancom.hwpx</string>
 				<string>com.haansoft.hancomofficeviewer.mac.hwp</string>

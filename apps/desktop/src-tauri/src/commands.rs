@@ -135,6 +135,42 @@ pub fn commit_staged_hwp_save(
 }
 
 #[tauri::command]
+pub fn prepare_staged_hwpx_save(app: AppHandle, target_path: String) -> Result<String, String> {
+    prepare_staged_file(
+        &app,
+        PathBuf::from(target_path),
+        ensure_hwpx_target_path,
+        staged_hwp_save_path,
+    )
+}
+
+#[tauri::command]
+pub fn commit_staged_hwpx_save(
+    app: AppHandle,
+    doc_id: String,
+    staged_path: String,
+    target_path: String,
+    expected_revision: Option<u64>,
+    allow_external_overwrite: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<SaveResult, String> {
+    let target_path = PathBuf::from(target_path);
+    let result = state
+        .sessions
+        .lock()
+        .map_err(|_| "문서 세션 잠금 실패".to_string())?
+        .commit_staged_hwpx_save(
+            &doc_id,
+            PathBuf::from(staged_path),
+            target_path.clone(),
+            expected_revision,
+            allow_external_overwrite.unwrap_or(false),
+        )?;
+    let _ = recent_documents::record_document(&app, &target_path);
+    Ok(result)
+}
+
+#[tauri::command]
 pub fn list_recent_documents(app: AppHandle) -> Result<Vec<RecentDocument>, String> {
     recent_documents::list_documents(&app)
 }
@@ -380,6 +416,16 @@ fn ensure_hwp_target_path(path: &Path) -> Result<(), String> {
     if format == DocumentFormat::Hwpx {
         return Err(
             "HWPX 경로에는 HWP 바이트를 저장할 수 없습니다. .hwp 파일로 저장하세요.".to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn ensure_hwpx_target_path(path: &Path) -> Result<(), String> {
+    ensure_target_parent(path, "저장 경로")?;
+    if DocumentFormat::from_path(path)? != DocumentFormat::Hwpx {
+        return Err(
+            "HWP 경로에는 HWPX 바이트를 저장할 수 없습니다. .hwpx 파일로 저장하세요.".to_string(),
         );
     }
     Ok(())

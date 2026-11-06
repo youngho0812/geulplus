@@ -18,3 +18,7 @@ export type {
   ParaProperties,
 } from '@upstream/core/types';
 export type { CanvasKitBundledFontSource } from '@upstream/core/font-loader';
+export type {
+  ContentLossReport,
+  DocumentExportArtifact,
+} from '@upstream/core/export-content-loss';

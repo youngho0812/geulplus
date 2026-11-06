@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "HOP",
-  "version": "0.4.5",
-  "identifier": "net.golbin.hop",
+  "productName": "GeulPlus",
+  "version": "1.0.0",
+  "identifier": "kr.geulplus.app",
+  "mainBinaryName": "GeulPlus",
   "build": {
     "beforeDevCommand": "cd ../.. && pnpm --filter @golbin/hop-studio-host dev",
     "beforeBuildCommand": "cd ../.. && pnpm run build:before-tauri",
@@ -12,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "HOP",
+        "title": "글플러스",
         "label": "main",
         "url": "index.html",
         "width": 1280,
@@ -29,11 +30,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "publisher": "golbin.net",
-    "shortDescription": "Open desktop editor for HWP and HWPX documents",
-    "longDescription": "HOP is Open HWP. HOP opens, edits, saves, and exports HWP/HWPX documents.",
+    "publisher": "글플러스",
+    "shortDescription": "글플러스 - HWP·HWPX 문서 편집기",
+    "longDescription": "글플러스는 HWP·HWPX 문서를 열고, 편집하고, HWPX로 저장하는 편집기입니다. 오픈소스 HOP(MIT)와 rhwp(MIT)를 기반으로 합니다.",
     "category": "Productivity",
-    "copyright": "Copyright (c) 2026 HOP contributors",
+    "copyright": "Copyright (c) 2026 글플러스. Based on HOP and rhwp, Copyright (c) 2025-2026 Edward Kim, MIT License.",
     "icon": [
       "../../../assets/logo/logo-32.png",
       "../../../assets/logo/logo-128.png",
@@ -44,7 +45,9 @@
     ],
     "resources": {
       "../../../third_party/rhwp/ttfs/opensource/NotoSansKR-Regular.ttf": "fonts/pdf/NotoSansKR-Regular.ttf",
-      "../../../third_party/rhwp/ttfs/opensource/NotoSansKR-OFL.txt": "fonts/pdf/NotoSansKR-OFL.txt"
+      "../../../third_party/rhwp/ttfs/opensource/NotoSansKR-OFL.txt": "fonts/pdf/NotoSansKR-OFL.txt",
+      "../../../LICENSE": "LICENSE.txt",
+      "../../../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
     },
     "fileAssociations": [
       {
@@ -55,12 +58,12 @@
         "role": "Editor",
         "rank": "Owner",
         "contentTypes": [
-          "net.golbin.hop.hwp",
+          "kr.geulplus.app.hwp",
           "com.hancom.hwp",
           "com.haansoft.hancomofficeviewer.mac.hwp"
         ],
         "exportedType": {
-          "identifier": "net.golbin.hop.hwp",
+          "identifier": "kr.geulplus.app.hwp",
           "conformsTo": ["public.data"]
         }
       },
@@ -72,12 +75,12 @@
         "role": "Editor",
         "rank": "Owner",
         "contentTypes": [
-          "net.golbin.hop.hwpx",
+          "kr.geulplus.app.hwpx",
           "com.hancom.hwpx",
           "com.haansoft.hancomofficeviewer.mac.hwpx"
         ],
         "exportedType": {
-          "identifier": "net.golbin.hop.hwpx",
+          "identifier": "kr.geulplus.app.hwpx",
           "conformsTo": ["public.data", "public.zip-archive"]
         }
       }
@@ -91,7 +94,11 @@
     },
     "windows": {
       "wix": {
-        "template": "windows/main.wxs"
+        "template": "windows/main.wxs",
+        "language": "ko-KR"
+      },
+      "nsis": {
+        "languages": ["Korean"]
       }
     }
   },

@@ -1,3 +1,4 @@
+import { APP_DISPLAY_NAME } from '../core/app-brand';
 import { AboutDialog as UpstreamAboutDialog } from '@/upstream/ui';
 
 export class AboutDialog extends UpstreamAboutDialog {
@@ -7,7 +8,7 @@ export class AboutDialog extends UpstreamAboutDialog {
 
     const hopVersion = document.createElement('div');
     hopVersion.className = 'about-hop-version';
-    hopVersion.textContent = `HOP ${__HOP_VERSION__}`;
+    hopVersion.textContent = `${APP_DISPLAY_NAME} ${__HOP_VERSION__}`;
 
     if (version?.parentNode) {
       version.parentNode.insertBefore(hopVersion, version.nextSibling);

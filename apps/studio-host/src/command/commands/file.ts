@@ -1,3 +1,4 @@
+import { APP_DISPLAY_NAME } from '../../core/app-brand';
 import { fileCommands as upstreamFileCommands } from '@/upstream/commands';
 import type { CommandDef, CommandServices } from '@/upstream/commands';
 import type { DesktopBridgeApi } from '@/core/tauri-bridge';
@@ -207,7 +208,7 @@ const hopOnlyCommands: CommandDef[] = [
     async execute(services) {
       const desktop = desktopBridge(services.wasm);
       if (!desktop) {
-        alert('PDF 내보내기는 HOP 데스크톱 앱에서 지원합니다.');
+        alert(`PDF 내보내기는 ${APP_DISPLAY_NAME} 데스크톱 앱에서 지원합니다.`);
         return;
       }
 

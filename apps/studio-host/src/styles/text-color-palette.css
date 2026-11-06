@@ -1,0 +1,19 @@
+/* 글자색 팔레트: 형광펜 팔레트(.sb-hl-*) 스타일을 재사용 */
+#text-color-dropdown.open .sb-tc-palette { display: block; }
+
+.sb-tc-palette .sb-hl-swatch {
+  width: 16px;
+  height: 16px;
+}
+
+.sb-tc-palette-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary, var(--color-text));
+  padding: 4px 0 2px;
+  white-space: nowrap;
+}
+
+.sb-tc-palette-label[hidden],
+.sb-tc-palette .sb-hl-palette-row[hidden] {
+  display: none;
+}

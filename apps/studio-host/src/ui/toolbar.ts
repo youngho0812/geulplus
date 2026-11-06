@@ -5,6 +5,7 @@ import { loadWebFonts } from '@/core/font-loader';
 import { getLocalFonts } from '@/core/local-fonts';
 import { sanitizeAuthoringFontFamily } from '@/core/font-authoring-policy';
 import { getCustomSelectRoot, syncCustomSelect } from './custom-select';
+import { setupTextColorPalette } from './text-color-palette';
 
 /** 서식 도구 모음 (style-bar) 컨트롤러 */
 export class Toolbar {
@@ -304,19 +305,18 @@ export class Toolbar {
     syncCustomSelect(this.fontName);
   }
 
-  /** 글자색 피커 이벤트 */
+  /** 글자색 팔레트 (기본 색 + 최근 사용한 색 + 다른 색...) */
   private setupColorPicker(): void {
-    this.btnTextColor.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-    });
-    this.btnTextColor.addEventListener('click', () => {
-      this.colorPicker.click();
-    });
-
-    this.colorPicker.addEventListener('input', () => {
-      const color = this.colorPicker.value;
-      this.colorBar.style.background = color;
-      this.eventBus.emit('format-char', { textColor: color } as CharProperties);
+    setupTextColorPalette({
+      dropdown: this.container.querySelector('#text-color-dropdown')!,
+      button: this.btnTextColor,
+      palette: this.container.querySelector('#text-color-palette')!,
+      picker: this.colorPicker,
+      onPick: (color) => {
+        this.colorBar.style.background = color;
+        this.colorPicker.value = color;
+        this.eventBus.emit('format-char', { textColor: color } as CharProperties);
+      },
     });
   }
 

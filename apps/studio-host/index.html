@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="/favicon.ico" />
-  <title>HOP</title>
+  <title>글플러스</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -570,12 +570,13 @@
           <div class="sb-ribbon-group sb-color-ribbon-group">
             <div class="sb-command-group sb-color-group">
               <!-- 글자색 -->
-              <span class="sb-color-wrap">
+              <span id="text-color-dropdown" class="sb-color-wrap sb-dropdown">
                 <button id="btn-text-color" class="sb-btn sb-has-arrow" title="글자 색" data-i18n-title="ui.btnTextColor.tooltip">
                   <span class="sb-color-visual"><span class="sb-ga" data-i18n="ui.btnTextColor.sample">가</span><span id="color-bar"></span></span>
                   <span class="sb-dd">▾</span>
                 </button>
                 <input id="text-color-picker" type="color" value="#000000" tabindex="-1" aria-label="글자 색 선택" data-i18n-aria-label="ui.textColorPicker.ariaLabel" />
+                <div id="text-color-palette" class="sb-hl-palette sb-tc-palette"></div>
               </span>
               <!-- 형광펜 -->
               <span id="highlight-dropdown" class="sb-dropdown">

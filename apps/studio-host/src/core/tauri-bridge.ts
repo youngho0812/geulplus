@@ -1,8 +1,18 @@
+import { APP_DISPLAY_NAME } from './app-brand';
 import { WasmBridge } from '@/upstream/core';
-import type { DocumentInfo } from '@/upstream/core';
+import type { ContentLossReport, DocumentInfo } from '@/upstream/core';
 import { remove, stat } from '@tauri-apps/plugin-fs';
 import { finiteFileSize, readFileInChunks, writeFileInChunks } from './chunked-fs';
 import { loadDocumentForOpen } from './document-open';
+import {
+  contentLossWarning,
+  isSameFilePath,
+  saveDialogFilters,
+  saveFormatFromPath,
+  suggestedDocumentName,
+  type SaveDialogFilter,
+  type SaveFormat,
+} from './save-format';
 
 type DocumentFormat = 'hwp' | 'hwpx';
 
@@ -196,7 +206,8 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
       return this.saveDocumentAs();
     }
     if (this.sourceFormat === 'hwpx') {
-      throw new Error('HWPX 원본 저장은 아직 안전하게 지원하지 않습니다. 다른 이름으로 저장에서 HWP 파일로 저장하세요.');
+      // HWPX 원본 덮어쓰기는 검증 단계(P2) 전까지 열지 않는다. 새 HWPX 파일로 저장하도록 안내한다.
+      return this.saveDocumentAs();
     }
     return this.saveHwpThroughStaging(docId, null);
   }
@@ -207,17 +218,29 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
 
   private async saveDocumentAs(): Promise<DesktopSaveResult | null> {
     const docId = this.ensureDocumentLoaded();
-    const targetPath = await this.selectSavePath(this.suggestedHwpName(), 'HWP 문서', ['hwp']);
+    const preferred: SaveFormat = this.sourceFormat;
+    const targetPath = await this.selectSavePath(
+      suggestedDocumentName(this.fileName, preferred),
+      saveDialogFilters(preferred),
+    );
     if (!targetPath) return null;
+    const format = saveFormatFromPath(targetPath, preferred);
+    const finalPath = this.withExtension(targetPath, format);
+    if (format === 'hwpx' && this.sourceFormat === 'hwpx' && isSameFilePath(this.sourcePath, finalPath)) {
+      throw new Error('HWPX 원본 덮어쓰기는 아직 지원하지 않습니다. 다른 파일 이름으로 저장하세요.');
+    }
     if (this.requiresPasswordForSave) {
       const { message } = await import('@tauri-apps/plugin-dialog');
-      const choice = await message('저장한 HWP 파일에는 암호가 적용되지 않습니다. 암호 없이 저장하시겠습니까?', {
+      const label = format.toUpperCase();
+      const choice = await message(`저장한 ${label} 파일에는 암호가 적용되지 않습니다. 암호 없이 저장하시겠습니까?`, {
         title: '암호 없이 저장', kind: 'warning',
         buttons: { ok: '암호 없이 저장', cancel: '취소' },
       });
       if (choice !== '암호 없이 저장' && choice !== 'Ok') return null;
     }
-    return this.saveHwpThroughStaging(docId, this.withExtension(targetPath, 'hwp'));
+    return format === 'hwpx'
+      ? this.saveHwpxThroughStaging(docId, finalPath)
+      : this.saveHwpThroughStaging(docId, finalPath);
   }
 
   async exportPdfFromCommand(): Promise<string | null> {
@@ -226,7 +249,9 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
 
   private async exportPdf(): Promise<string | null> {
     this.ensureDocumentLoaded();
-    const targetPath = await this.selectSavePath(this.suggestedPdfName(), 'PDF 문서', ['pdf']);
+    const targetPath = await this.selectSavePath(this.suggestedPdfName(), [
+      { name: 'PDF 문서', extensions: ['pdf'] },
+    ]);
     if (!targetPath) return null;
     const finalPath = this.withExtension(targetPath, 'pdf');
     const stagedPath = await this.invoke<string>('prepare_staged_hwp_pdf_export', {
@@ -370,14 +395,54 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
 
   private async selectSavePath(
     defaultPath: string,
-    filterName: string,
-    extensions: string[],
+    filters: SaveDialogFilter[],
   ): Promise<string | null> {
     const { save } = await import('@tauri-apps/plugin-dialog');
-    return save({
-      defaultPath,
-      filters: [{ name: filterName, extensions }],
+    return save({ defaultPath, filters });
+  }
+
+  // HWPX는 현재 WASM 편집 상태에서 바로 직렬화한다. 내용 손실이 보고되면 사용자가
+  // 확인하기 전에는 staging도 만들지 않으며, Rust 쪽은 패키지 검증과 재파싱 후 원자적으로 교체한다.
+  private async saveHwpxThroughStaging(
+    docId: string,
+    finalPath: string,
+  ): Promise<DesktopSaveResult | null> {
+    const allowExternalOverwrite = await this.confirmExternalOverwriteIfNeeded(docId, finalPath);
+    if (allowExternalOverwrite === null) return null;
+
+    const artifact = super.exportHwpxWithReport();
+    if (!(await this.confirmContentLoss(artifact.contentLoss))) return null;
+
+    const stagedPath = await this.invoke<string>('prepare_staged_hwpx_save', { targetPath: finalPath });
+    try {
+      await writeFileInChunks(stagedPath, artifact.bytes);
+      const result = await this.invoke<DesktopSaveResult>('commit_staged_hwpx_save', {
+        docId,
+        stagedPath,
+        targetPath: finalPath,
+        expectedRevision: this.revision,
+        allowExternalOverwrite,
+      });
+      this.applyNativeSaveResult(result);
+      this.requiresPasswordForSave = false;
+      await this.noteFinderRecentDocument(finalPath);
+      return result;
+    } finally {
+      await remove(stagedPath).catch(() => undefined);
+    }
+  }
+
+  private async confirmContentLoss(report: ContentLossReport): Promise<boolean> {
+    const warning = contentLossWarning(report);
+    if (!warning) return true;
+    const { message } = await import('@tauri-apps/plugin-dialog');
+    const saveLabel = '그래도 저장';
+    const choice = await message(warning, {
+      title: '내용 손실 경고',
+      kind: 'warning',
+      buttons: { ok: saveLabel, cancel: '취소' },
     });
+    return choice === saveLabel || choice === 'Ok';
   }
 
   private async saveHwpThroughStaging(
@@ -425,7 +490,7 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
     const cancelLabel = '저장 취소';
     const result = await message(
       [
-        '원본 파일이 HOP 밖에서 변경되었습니다.',
+        `원본 파일이 ${APP_DISPLAY_NAME} 밖에서 변경되었습니다.`,
         status.sourcePath ? `파일: ${status.sourcePath}` : '',
         status.reason ?? '',
         '',
@@ -576,18 +641,13 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
     this.updateDocumentTitle();
   }
 
-  private suggestedHwpName(): string {
-    const name = this.fileName.replace(/\.(hwp|hwpx)$/i, '') || 'document';
-    return `${name}.hwp`;
-  }
-
   private suggestedPdfName(): string {
     const name = this.fileName.replace(/\.(hwp|hwpx)$/i, '') || 'document';
     return `${name}.pdf`;
   }
 
   private updateDocumentTitle(): void {
-    const name = this.docId ? this.fileName || '문서' : 'HOP';
-    document.title = `${this.dirty ? '• ' : ''}${name} - HOP`;
+    const name = this.docId ? this.fileName || '문서' : APP_DISPLAY_NAME;
+    document.title = `${this.dirty ? '• ' : ''}${name} - ${APP_DISPLAY_NAME}`;
   }
 }

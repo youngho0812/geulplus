@@ -194,18 +194,51 @@ impl DocumentSessionManager {
         expected_revision: Option<u64>,
         allow_external_overwrite: bool,
     ) -> Result<SaveResult, String> {
+        self.commit_staged_save(
+            doc_id,
+            staged_path,
+            target_path,
+            expected_revision,
+            allow_external_overwrite,
+            DocumentFormat::Hwp,
+        )
+    }
+
+    pub fn commit_staged_hwpx_save(
+        &mut self,
+        doc_id: &str,
+        staged_path: PathBuf,
+        target_path: PathBuf,
+        expected_revision: Option<u64>,
+        allow_external_overwrite: bool,
+    ) -> Result<SaveResult, String> {
+        self.commit_staged_save(
+            doc_id,
+            staged_path,
+            target_path,
+            expected_revision,
+            allow_external_overwrite,
+            DocumentFormat::Hwpx,
+        )
+    }
+
+    // Shared commit path: the staged bytes must match the requested format and
+    // re-parse as an editable document before they replace the target atomically.
+    fn commit_staged_save(
+        &mut self,
+        doc_id: &str,
+        staged_path: PathBuf,
+        target_path: PathBuf,
+        expected_revision: Option<u64>,
+        allow_external_overwrite: bool,
+        expected_format: DocumentFormat,
+    ) -> Result<SaveResult, String> {
         let session = self.session_mut(doc_id)?;
         session.check_revision(expected_revision)?;
         if !allow_external_overwrite {
             session.check_external_modification_for_path(&target_path)?;
         }
-        let format = DocumentFormat::from_path(&target_path)?;
-        if format == DocumentFormat::Hwpx {
-            return Err(
-                "HWPX 경로에는 HWP 바이트를 저장할 수 없습니다. .hwp 파일로 저장하세요."
-                    .to_string(),
-            );
-        }
+        ensure_target_format(&target_path, expected_format)?;
         let bytes = std::fs::read(&staged_path).map_err(|e| {
             format!(
                 "staging 파일을 읽을 수 없습니다: {} ({})",
@@ -213,9 +246,12 @@ impl DocumentSessionManager {
                 e
             )
         })?;
+        if expected_format == DocumentFormat::Hwpx {
+            ensure_hwpx_package(&bytes)?;
+        }
         let core =
             editable_core_from_bytes(&bytes, "저장 바이트 검증 실패", "저장 문서 변환 실패")?;
-        session.finish_hwp_save(target_path, &bytes, Some(core))?;
+        session.finish_save(target_path, &bytes, Some(core), expected_format)?;
         let _ = std::fs::remove_file(&staged_path);
         Ok(session.save_result())
     }
@@ -537,7 +573,7 @@ impl DocumentSession {
             return Ok(ExternalModificationStatus {
                 changed: true,
                 source_path: Some(source_path.to_string_lossy().to_string()),
-                reason: Some("원본 파일이 HOP 밖에서 변경되었습니다".to_string()),
+                reason: Some("원본 파일이 글플러스 밖에서 변경되었습니다".to_string()),
             });
         }
 
@@ -564,11 +600,12 @@ impl DocumentSession {
         Ok(())
     }
 
-    fn finish_hwp_save(
+    fn finish_save(
         &mut self,
         target_path: PathBuf,
         bytes: &[u8],
         core_override: Option<DocumentCore>,
+        format: DocumentFormat,
     ) -> Result<(), String> {
         atomic_write(&target_path, bytes)?;
         if let Some(core) = core_override {
@@ -576,7 +613,7 @@ impl DocumentSession {
             self.core = Some(core);
         }
         self.source_path = Some(target_path);
-        self.source_format = DocumentFormat::Hwp;
+        self.source_format = format;
         self.refresh_source_fingerprint_from_bytes(bytes)?;
         self.revision += 1;
         self.dirty = false;
@@ -616,6 +653,51 @@ impl DocumentFormat {
             )),
         }
     }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Hwp => "HWP",
+            Self::Hwpx => "HWPX",
+        }
+    }
+}
+
+fn ensure_target_format(target_path: &Path, expected: DocumentFormat) -> Result<(), String> {
+    let actual = DocumentFormat::from_path(target_path)?;
+    if actual != expected {
+        return Err(format!(
+            "{} 경로에는 {} 바이트를 저장할 수 없습니다. .{} 파일로 저장하세요.",
+            actual.label(),
+            expected.label(),
+            expected.label().to_ascii_lowercase()
+        ));
+    }
+    Ok(())
+}
+
+const HWPX_MIMETYPE: &[u8] = b"application/hwp+zip";
+
+// HWPX is an OCF-style ZIP whose first entry must be an uncompressed `mimetype`.
+// This catches HWP bytes or truncated output before the full re-parse runs.
+pub(crate) fn ensure_hwpx_package(bytes: &[u8]) -> Result<(), String> {
+    const INVALID: &str = "HWPX 패키지 검증 실패: 첫 항목이 올바른 mimetype이 아닙니다";
+    if bytes.len() < 30 || &bytes[0..4] != b"PK\x03\x04" {
+        return Err("HWPX 패키지 검증 실패: ZIP 파일이 아닙니다".to_string());
+    }
+    let read_u16 = |at: usize| u16::from_le_bytes([bytes[at], bytes[at + 1]]) as usize;
+    let method = read_u16(8);
+    let name_len = read_u16(26);
+    let extra_len = read_u16(28);
+    let name_end = 30 + name_len;
+    if bytes.len() < name_end || &bytes[30..name_end] != b"mimetype" || method != 0 {
+        return Err(INVALID.to_string());
+    }
+    let data_start = name_end + extra_len;
+    let data_end = data_start + HWPX_MIMETYPE.len();
+    if bytes.len() < data_end || &bytes[data_start..data_end] != HWPX_MIMETYPE {
+        return Err(INVALID.to_string());
+    }
+    Ok(())
 }
 
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -1035,6 +1117,93 @@ mod tests {
 
         assert!(error.contains("HWPX 경로에는 HWP 바이트를 저장할 수 없습니다"));
         assert!(staged_path.exists());
+    }
+
+    #[test]
+    fn commit_staged_hwpx_save_validates_and_switches_session_to_hwpx() {
+        let mut manager = DocumentSessionManager::default();
+        let opened = manager.create_document().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let staged_path = dir.path().join("save.tmp");
+        let target_path = dir.path().join("saved.hwpx");
+
+        let bytes = manager
+            .session(&opened.doc_id)
+            .unwrap()
+            .core
+            .as_ref()
+            .unwrap()
+            .export_hwpx_native()
+            .unwrap();
+        std::fs::write(&staged_path, &bytes).unwrap();
+
+        let result = manager
+            .commit_staged_hwpx_save(
+                &opened.doc_id,
+                staged_path.clone(),
+                target_path.clone(),
+                Some(opened.revision),
+                false,
+            )
+            .unwrap();
+
+        assert_eq!(result.format, DocumentFormat::Hwpx);
+        assert_eq!(std::fs::read(&target_path).unwrap(), bytes);
+        assert!(!staged_path.exists());
+        let session = manager.session(&opened.doc_id).unwrap();
+        assert_eq!(session.source_format, DocumentFormat::Hwpx);
+        assert_eq!(session.revision, opened.revision + 1);
+        assert!(!session.dirty);
+    }
+
+    #[test]
+    fn commit_staged_hwpx_save_rejects_hwp_target_and_non_hwpx_bytes() {
+        let mut manager = DocumentSessionManager::default();
+        let opened = manager.create_document().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let staged_path = dir.path().join("save.tmp");
+        std::fs::write(&staged_path, b"not a hwpx document").unwrap();
+
+        let wrong_target = manager
+            .commit_staged_hwpx_save(
+                &opened.doc_id,
+                staged_path.clone(),
+                dir.path().join("saved.hwp"),
+                Some(opened.revision),
+                false,
+            )
+            .unwrap_err();
+        assert!(wrong_target.contains("HWP 경로에는 HWPX 바이트를 저장할 수 없습니다"));
+
+        let bad_bytes = manager
+            .commit_staged_hwpx_save(
+                &opened.doc_id,
+                staged_path.clone(),
+                dir.path().join("saved.hwpx"),
+                Some(opened.revision),
+                false,
+            )
+            .unwrap_err();
+        assert!(bad_bytes.contains("HWPX 패키지 검증 실패"));
+        assert!(!dir.path().join("saved.hwpx").exists());
+        assert!(staged_path.exists());
+    }
+
+    #[test]
+    fn ensure_hwpx_package_requires_stored_mimetype_first_entry() {
+        let mut ok = Vec::new();
+        ok.extend_from_slice(b"PK\x03\x04");
+        ok.extend_from_slice(&[0u8; 22]); // version..uncompressed size, method = 0
+        ok.extend_from_slice(&(8u16).to_le_bytes());
+        ok.extend_from_slice(&(0u16).to_le_bytes());
+        ok.extend_from_slice(b"mimetype");
+        ok.extend_from_slice(HWPX_MIMETYPE);
+        assert!(ensure_hwpx_package(&ok).is_ok());
+
+        let mut deflated = ok.clone();
+        deflated[8] = 8;
+        assert!(ensure_hwpx_package(&deflated).is_err());
+        assert!(ensure_hwpx_package(b"\xD0\xCF\x11\xE0 hwp cfb").is_err());
     }
 
     #[test]
