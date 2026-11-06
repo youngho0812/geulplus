@@ -2,7 +2,7 @@
   "name": "hop-desktop",
   "version": "1.0.0",
   "private": true,
-  "description": "HOP - Open HWP desktop app",
+  "description": "글플러스 - HWP·HWPX 문서 편집기",
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
