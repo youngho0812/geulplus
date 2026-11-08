@@ -24,7 +24,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use commands::{
     cancel_app_quit, check_external_modification, clear_recent_documents, close_document,
-    commit_staged_hwp_save, commit_staged_hwpx_save, create_document, create_editor_window,
+    commit_staged_hwp_save, commit_staged_hwpx_save, save_target_exists, create_document, create_editor_window,
     desktop_platform, destroy_current_window, export_pdf, export_pdf_from_hwp_path,
     list_local_fonts, list_recent_documents, mark_document_dirty, mutate_document,
     note_finder_recent_document, open_document_tracking, prepare_document_open,
@@ -100,6 +100,7 @@ pub fn run() {
             commit_staged_hwp_save,
             prepare_staged_hwpx_save,
             commit_staged_hwpx_save,
+            save_target_exists,
             check_external_modification,
             take_pending_open_paths,
             reveal_in_folder,

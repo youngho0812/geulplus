@@ -6,6 +6,8 @@ const passwordPrompt = vi.hoisted(() => vi.fn());
 vi.mock('@/upstream/ui', () => ({ showHwpPasswordDialog: passwordPrompt }));
 
 const invokeMock = vi.hoisted(() => vi.fn());
+// 저장 대상 존재 여부는 별도 mock으로 분리해 기존 invoke 순서 검증에 섞이지 않게 한다.
+const saveTargetExistsMock = vi.hoisted(() => vi.fn());
 const saveMock = vi.hoisted(() => vi.fn());
 const openMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => vi.fn());
@@ -14,7 +16,9 @@ const statMock = vi.hoisted(() => vi.fn());
 const removeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: invokeMock,
+  invoke: (command: string, args?: unknown) => (command === 'save_target_exists'
+    ? saveTargetExistsMock(args)
+    : invokeMock(command, args)),
 }));
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -71,6 +75,8 @@ vi.mock('@/core/wasm-bridge', () => ({
 describe('TauriBridge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    saveTargetExistsMock.mockReset();
+    saveTargetExistsMock.mockResolvedValue(false);
     (globalThis as { document?: { title: string } }).document = { title: '' };
     statMock.mockResolvedValue({ size: 3, isFile: true, mtime: new Date('2026-04-23T00:00:00.000Z') });
     removeMock.mockResolvedValue(undefined);
@@ -215,9 +221,9 @@ describe('TauriBridge', () => {
     const bridge = new TauriBridge();
     applyOpenResult(bridge, nativeOpenResult());
     bridge.requiresPasswordForSave = true;
-    await expect(bridge.saveDocumentFromCommand()).rejects.toThrow('암호 문서의 원본 저장');
     saveMock.mockResolvedValue('/tmp/plain.hwp');
     messageMock.mockResolvedValue('취소');
+    expect(await bridge.saveDocumentFromCommand()).toBeNull();
     expect(await bridge.saveDocumentAsFromCommand()).toBeNull();
     expect(messageMock).toHaveBeenCalledWith(expect.stringContaining('암호가 적용되지 않습니다'), expect.anything());
     expect(invokeMock).not.toHaveBeenCalled();
@@ -464,13 +470,23 @@ describe('TauriBridge', () => {
     expect(invokeMock).toHaveBeenNthCalledWith(2, 'clear_recent_documents', {});
   });
 
-  it('routes direct save for HWPX sources to Save As and refuses overwriting the source', async () => {
+  it.each(['hwp', 'hwpx'] as const)('routes direct save for %s sources to Save As and re-prompts instead of overwriting', async (format) => {
     const bridge = new TauriBridge();
-    applyOpenResult(bridge, hwpxOpenResult());
-    saveMock.mockResolvedValue('/tmp/source.hwpx');
+    applyOpenResult(bridge, format === 'hwpx' ? hwpxOpenResult() : nativeOpenResult());
+    const sourcePath = format === 'hwpx' ? '/tmp/source.hwpx' : '/tmp/source.hwp';
+    saveMock.mockResolvedValueOnce(sourcePath).mockResolvedValueOnce(null);
+    saveTargetExistsMock.mockResolvedValue(true);
+    messageMock.mockResolvedValue('Ok');
 
-    await expect(bridge.saveDocumentFromCommand()).rejects.toThrow('HWPX 원본 덮어쓰기는 아직 지원하지 않습니다');
-    expect(saveMock).toHaveBeenCalledWith({
+    expect(await bridge.saveDocumentFromCommand()).toBeNull();
+    expect(saveTargetExistsMock).toHaveBeenCalledWith({ targetPath: sourcePath });
+    expect(messageMock).toHaveBeenCalledWith(expect.stringContaining('같은 이름의 파일이 이미 있습니다'), expect.anything());
+    expect(saveMock).toHaveBeenCalledTimes(2);
+    expect(saveMock).toHaveBeenLastCalledWith(expect.objectContaining({ defaultPath: sourcePath }));
+    expect(invokeMock).not.toHaveBeenCalledWith('prepare_staged_hwp_save', expect.anything());
+    expect(invokeMock).not.toHaveBeenCalledWith('commit_staged_hwp_save', expect.anything());
+    if (format === 'hwp') return;
+    expect(saveMock).toHaveBeenNthCalledWith(1, {
       defaultPath: 'source.hwpx',
       filters: [
         { name: 'HWPX 문서', extensions: ['hwpx'] },

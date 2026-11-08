@@ -6,7 +6,6 @@ import { finiteFileSize, readFileInChunks, writeFileInChunks } from './chunked-f
 import { loadDocumentForOpen } from './document-open';
 import {
   contentLossWarning,
-  isSameFilePath,
   saveDialogFilters,
   saveFormatFromPath,
   suggestedDocumentName,
@@ -198,18 +197,9 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
   }
 
   private async saveDocument(): Promise<DesktopSaveResult | null> {
-    const docId = this.ensureDocumentLoaded();
-    if (this.requiresPasswordForSave) {
-      throw new Error('암호 문서의 원본 저장은 아직 지원하지 않습니다. 다른 이름으로 저장에서 암호 없는 HWP 파일로 저장하세요.');
-    }
-    if (!this.sourcePath) {
-      return this.saveDocumentAs();
-    }
-    if (this.sourceFormat === 'hwpx') {
-      // HWPX 원본 덮어쓰기는 검증 단계(P2) 전까지 열지 않는다. 새 HWPX 파일로 저장하도록 안내한다.
-      return this.saveDocumentAs();
-    }
-    return this.saveHwpThroughStaging(docId, null);
+    // 글플러스는 원본을 덮어쓰지 않는다. 저장은 항상 새 파일 이름으로 받는다.
+    this.ensureDocumentLoaded();
+    return this.saveDocumentAs();
   }
 
   async saveDocumentAsFromCommand(): Promise<DesktopSaveResult | null> {
@@ -219,15 +209,27 @@ export class TauriBridge extends WasmBridge implements DesktopBridgeApi {
   private async saveDocumentAs(): Promise<DesktopSaveResult | null> {
     const docId = this.ensureDocumentLoaded();
     const preferred: SaveFormat = this.sourceFormat;
-    const targetPath = await this.selectSavePath(
-      suggestedDocumentName(this.fileName, preferred),
-      saveDialogFilters(preferred),
-    );
-    if (!targetPath) return null;
-    const format = saveFormatFromPath(targetPath, preferred);
-    const finalPath = this.withExtension(targetPath, format);
-    if (format === 'hwpx' && this.sourceFormat === 'hwpx' && isSameFilePath(this.sourcePath, finalPath)) {
-      throw new Error('HWPX 원본 덮어쓰기는 아직 지원하지 않습니다. 다른 파일 이름으로 저장하세요.');
+    let suggestion = suggestedDocumentName(this.fileName, preferred);
+    let format: SaveFormat;
+    let finalPath: string;
+    // 이미 있는 파일(원본 포함)을 고르면 안내 후 저장 창을 다시 연다. 덮어쓰기는 허용하지 않는다.
+    for (;;) {
+      const targetPath = await this.selectSavePath(suggestion, saveDialogFilters(preferred));
+      if (!targetPath) return null;
+      format = saveFormatFromPath(targetPath, preferred);
+      finalPath = this.withExtension(targetPath, format);
+      if (!(await this.invoke<boolean>('save_target_exists', { targetPath: finalPath }))) break;
+      const { message } = await import('@tauri-apps/plugin-dialog');
+      await message(
+        [
+          '같은 이름의 파일이 이미 있습니다.',
+          `${APP_DISPLAY_NAME}는 원본을 포함해 기존 파일을 덮어쓰지 않습니다. 다른 이름을 입력하세요.`,
+          '',
+          `파일: ${finalPath}`,
+        ].join('\n'),
+        { title: '다른 이름으로 저장', kind: 'warning' },
+      );
+      suggestion = finalPath;
     }
     if (this.requiresPasswordForSave) {
       const { message } = await import('@tauri-apps/plugin-dialog');

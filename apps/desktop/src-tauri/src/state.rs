@@ -234,6 +234,9 @@ impl DocumentSessionManager {
     ) -> Result<SaveResult, String> {
         let session = self.session_mut(doc_id)?;
         session.check_revision(expected_revision)?;
+        // 글플러스는 원본을 포함해 이미 있는 파일을 절대 덮어쓰지 않는다.
+        // 저장은 항상 새 파일 이름으로만 한다.
+        ensure_new_save_target(&target_path)?;
         if !allow_external_overwrite {
             session.check_external_modification_for_path(&target_path)?;
         }
@@ -659,6 +662,16 @@ impl DocumentFormat {
             Self::Hwpx => "HWPX",
         }
     }
+}
+
+fn ensure_new_save_target(target_path: &Path) -> Result<(), String> {
+    if std::fs::symlink_metadata(target_path).is_ok() {
+        return Err(format!(
+            "이미 있는 파일에는 저장할 수 없습니다. 다른 이름으로 저장하세요: {}",
+            target_path.display()
+        ));
+    }
+    Ok(())
 }
 
 fn ensure_target_format(target_path: &Path, expected: DocumentFormat) -> Result<(), String> {
@@ -1153,6 +1166,44 @@ mod tests {
         assert_eq!(session.source_format, DocumentFormat::Hwpx);
         assert_eq!(session.revision, opened.revision + 1);
         assert!(!session.dirty);
+    }
+
+    #[test]
+    fn commit_staged_save_never_overwrites_existing_file() {
+        let mut manager = DocumentSessionManager::default();
+        let opened = manager.create_document().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let staged_path = dir.path().join("save.tmp");
+        let target_path = dir.path().join("original.hwp");
+        std::fs::write(&target_path, b"original").unwrap();
+
+        let bytes = manager
+            .session(&opened.doc_id)
+            .unwrap()
+            .core
+            .as_ref()
+            .unwrap()
+            .export_hwp_native()
+            .unwrap();
+        std::fs::write(&staged_path, &bytes).unwrap();
+
+        for allow_external_overwrite in [false, true] {
+            let error = manager
+                .commit_staged_hwp_save(
+                    &opened.doc_id,
+                    staged_path.clone(),
+                    target_path.clone(),
+                    Some(opened.revision),
+                    allow_external_overwrite,
+                )
+                .unwrap_err();
+            assert!(error.contains("이미 있는 파일에는 저장할 수 없습니다"));
+        }
+        assert_eq!(std::fs::read(&target_path).unwrap(), b"original");
+        assert_eq!(
+            manager.session(&opened.doc_id).unwrap().revision,
+            opened.revision
+        );
     }
 
     #[test]

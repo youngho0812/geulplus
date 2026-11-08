@@ -218,6 +218,13 @@ pub fn render_document_preview(path: String) -> Result<String, String> {
         .map_err(|e| format!("문서 미리보기를 렌더링할 수 없습니다: {}", e))
 }
 
+/// 저장 대상 경로에 이미 파일(또는 폴더·링크)이 있는지 알려준다.
+/// 글플러스는 기존 파일을 덮어쓰지 않으므로 저장 창에서 새 이름을 다시 받는다.
+#[tauri::command]
+pub fn save_target_exists(target_path: String) -> bool {
+    std::fs::symlink_metadata(PathBuf::from(target_path)).is_ok()
+}
+
 #[tauri::command]
 pub fn check_external_modification(
     doc_id: String,
