@@ -100,6 +100,9 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Apply rhwp patches
+        run: pnpm upstream:patch
+
       - name: Verify rhwp upstream contract
         run: pnpm upstream:verify
 

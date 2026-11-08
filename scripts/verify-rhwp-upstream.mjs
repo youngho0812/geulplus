@@ -1,3 +1,5 @@
+import { rhwpPatchPath } from './apply-rhwp-patches.mjs';
+import { existsSync } from 'node:fs';
 import { cargoLockHasPatchSource, cargoPatchTomlPattern, readPathCargoPatch } from './lib/rhwp-cargo-patches.mjs';
 import assert from 'node:assert/strict';
 import { access, readFile, readdir } from 'node:fs/promises';
@@ -40,8 +42,16 @@ export async function verifyRhwpUpstream() {
   assert.equal(lock.tag, `v${lock.version}`);
   assert.match(lock.commit, /^[0-9a-f]{40}$/);
   assert.equal(currentUpstreamCommit(), lock.commit, 'submodule checkout must match upstream lock');
-  assert.equal(run('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: upstreamDir }),
-    '', 'upstream checkout must be clean');
+  // The checkout may differ from upstream only by exactly patches/rhwp.patch.
+  assert.equal(run('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: upstreamDir })
+    .split('\n').filter((line) => line.startsWith('??')).join('\n'),
+  '', 'upstream checkout must not contain untracked files');
+  const upstreamDiff = run('git', ['-c', 'core.autocrlf=false', 'diff', '--no-color', '--no-ext-diff'], { cwd: upstreamDir });
+  const expectedDiff = existsSync(rhwpPatchPath)
+    ? (await readFile(rhwpPatchPath, 'utf8')).replaceAll('\r\n', '\n').trim()
+    : '';
+  assert.equal(upstreamDiff.replaceAll('\r\n', '\n'), expectedDiff,
+    'upstream checkout must be clean apart from patches/rhwp.patch (run pnpm upstream:patch)');
 
   const cargoToml = await readFile(join(upstreamDir, 'Cargo.toml'), 'utf8');
   const studioPackage = await readJson(join(upstreamDir, 'rhwp-studio/package.json'));

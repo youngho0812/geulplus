@@ -1,0 +1,334 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 931cbe045..4c0bd2b68 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -273,7 +273,7 @@ dependencies = [
+  "arrayvec",
+  "cc",
+  "cfg-if",
+- "constant_time_eq",
++ "constant_time_eq 0.4.2",
+  "cpufeatures",
+ ]
+ 
+@@ -550,6 +550,15 @@ version = "0.4.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+ 
++[[package]]
++name = "constant_time_eq"
++version = "0.6.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9eb6feb175df65d0a3ccd3e73484e940d0ac664e8034f0519fd49a93db3071d9"
++dependencies = [
++ "rustversion",
++]
++
+ [[package]]
+ name = "core_detect"
+ version = "1.0.0"
+@@ -1685,6 +1694,18 @@ dependencies = [
+  "jni-sys 0.3.1",
+ ]
+ 
++[[package]]
++name = "nix"
++version = "0.31.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
++dependencies = [
++ "bitflags 2.13.1",
++ "cfg-if",
++ "cfg_aliases",
++ "libc",
++]
++
+ [[package]]
+ name = "nom"
+ version = "7.1.3"
+@@ -1836,10 +1857,10 @@ dependencies = [
+ ]
+ 
+ [[package]]
+-name = "paste"
+-version = "1.0.15"
++name = "pastey"
++version = "0.2.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
++checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
+ 
+ [[package]]
+ name = "pbkdf2"
+@@ -2336,7 +2357,7 @@ dependencies = [
+  "js-sys",
+  "ml-dsa",
+  "ml-kem",
+- "paste",
++ "pastey",
+  "pbkdf2",
+  "pcx",
+  "pdf-writer",
+@@ -3131,9 +3152,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "typed-path"
+-version = "0.12.3"
++version = "0.13.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
++checksum = "9ce898823d8cd0f028662d2f349694b1af0a5cc9be83f1d213a00d3147445e1e"
+ 
+ [[package]]
+ name = "typenum"
+@@ -3911,18 +3932,38 @@ name = "zeroize"
+ version = "1.9.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
++dependencies = [
++ "zeroize_derive",
++]
++
++[[package]]
++name = "zeroize_derive"
++version = "1.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3c50655cbb0fe3fc43170059e702f1ce5e19b84cec58dc87b037a09935c2f328"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.119",
++]
+ 
+ [[package]]
+ name = "zip"
+-version = "8.6.0"
++version = "9.4.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
++checksum = "df3845f734baabdd02de353a20580e30ceccd03897def44a4eb8e9654992e294"
+ dependencies = [
++ "constant_time_eq 0.6.1",
+  "crc32fast",
+  "flate2",
++ "getrandom 0.4.3",
+  "indexmap",
++ "libc",
+  "memchr",
++ "nix",
+  "typed-path",
++ "windows-sys",
++ "zeroize",
+  "zopfli",
+ ]
+ 
+diff --git a/Cargo.toml b/Cargo.toml
+index a00248c41..8a185ae25 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -273,14 +273,14 @@ zeroize = "1"
+ # 비대칭 키교환만 격자 KEM 으로 교체한다. 순수 Rust(RustCrypto) 라 wasm 도 그대로 컴파일.
+ ml-kem = "0.3"
+ rand_core = "0.10"
+-zip = { version = "8.5", default-features = false, features = ["deflate"] }
++zip = { version = "9.0", default-features = false, features = ["deflate"] }
+ quick-xml = "0.42"
+ roxmltree = "0.21"
+ svgtypes = "0.16"
+ codepage = "0.1.2"
+ embedded-io = "0.7.1"
+ encoding_rs = "0.8.35"
+-paste = "1.0.15"
++paste = { package = "pastey", version = "0.2" }
+ snafu = "0.9.0"
+ strum = { version = "0.28.0", default-features = false, features = ["derive"] }
+ unicode-segmentation = "1.12.0"
+@@ -349,7 +349,7 @@ wasm-bindgen-test = "0.3"
+ # [#3707] 통합 시험이 공격 문서를 **시험 시점에 합성**하려면 HWPX(zip) 재압축이
+ # 필요하다 — 실물 악성 파일을 저장소에 커밋하지 않기 위해서다. 위 [dependencies]
+ # 와 같은 버전이라 의존성 그래프도, WASM 산출물도 그대로다.
+-zip = { version = "8.5", default-features = false, features = ["deflate"] }
++zip = { version = "9.0", default-features = false, features = ["deflate"] }
+ # [#4378] CAS 계약 테스트가 기대 해시를 스스로 계산한다 — 위 [dependencies] 와
+ # 같은 버전이라 의존성 그래프도 산출물도 그대로다(zip 선례와 동일).
+ sha2 = "0.11"
+diff --git a/crates/rhwp-password-crypto/Cargo.toml b/crates/rhwp-password-crypto/Cargo.toml
+index e1d498f1d..93c9892a4 100644
+--- a/crates/rhwp-password-crypto/Cargo.toml
++++ b/crates/rhwp-password-crypto/Cargo.toml
+@@ -20,4 +20,4 @@ quick-xml = "0.42"
+ roxmltree = "0.21"
+ sha1 = "0.11"
+ sha2 = "0.11"
+-zip = { version = "8.5", default-features = false, features = ["deflate"] }
++zip = { version = "9.0", default-features = false, features = ["deflate"] }
+diff --git a/crates/rhwp-password-crypto/src/lib.rs b/crates/rhwp-password-crypto/src/lib.rs
+index 861c62942..24dd9212c 100644
+--- a/crates/rhwp-password-crypto/src/lib.rs
++++ b/crates/rhwp-password-crypto/src/lib.rs
+@@ -777,7 +777,10 @@ pub fn decrypt_hwpx_package(
+         let mut input = source
+             .by_index(index)
+             .map_err(|error| PasswordCryptoError::HwpxZip(error.to_string()))?;
+-        let name = input.name().to_string();
++        let name = input
++            .name()
++            .map_err(|error| PasswordCryptoError::HwpxZip(error.to_string()))?
++            .into_owned();
+         if input.is_dir() {
+             destination
+                 .add_directory(name, SimpleFileOptions::default())
+@@ -969,7 +972,10 @@ pub fn encrypt_hwpx_package(data: &[u8], password: &[u8]) -> Result<Vec<u8>, Pas
+         let mut input = source
+             .by_index(index)
+             .map_err(|error| PasswordCryptoError::HwpxZip(error.to_string()))?;
+-        let name = input.name().to_string();
++        let name = input
++            .name()
++            .map_err(|error| PasswordCryptoError::HwpxZip(error.to_string()))?
++            .into_owned();
+         let is_dir = input.is_dir();
+         let data = if is_dir {
+             Vec::new()
+diff --git a/src/diagnostics/hwp5_contract_analyze.rs b/src/diagnostics/hwp5_contract_analyze.rs
+index ac889213e..0af5b3972 100644
+--- a/src/diagnostics/hwp5_contract_analyze.rs
++++ b/src/diagnostics/hwp5_contract_analyze.rs
+@@ -753,7 +753,10 @@ fn summarize_hwpx_xml(bytes: &[u8]) -> Result<HwpxXmlSummary, String> {
+         let mut file = archive
+             .by_index(index)
+             .map_err(|error| format!("HWPX entry 열기 실패: {error}"))?;
+-        let name = file.name().to_string();
++        let name = file
++            .name()
++            .map_err(|error| format!("HWPX entry 이름 읽기 실패: {error}"))?
++            .into_owned();
+         if name.starts_with("BinData/") {
+             summary.bindata_files += 1;
+         }
+diff --git a/src/parser/hwpx/reader.rs b/src/parser/hwpx/reader.rs
+index 35cf5de06..1165ef572 100644
+--- a/src/parser/hwpx/reader.rs
++++ b/src/parser/hwpx/reader.rs
+@@ -229,7 +229,10 @@ impl HwpxReader {
+ 
+     /// 아카이브 내 파일 목록을 반환한다.
+     pub fn file_names(&self) -> Vec<String> {
+-        self.archive.file_names().map(|s| s.to_string()).collect()
++        self.archive
++            .file_names()
++            .filter_map(|name| name.ok().map(|name| name.into_owned()))
++            .collect()
+     }
+ }
+ 
+diff --git a/src/parser/mod.rs b/src/parser/mod.rs
+index e4467db3e..fdecfc318 100644
+--- a/src/parser/mod.rs
++++ b/src/parser/mod.rs
+@@ -1815,7 +1815,7 @@ fn extract_thumbnail_from_hwpx(data: &[u8], max_bytes: usize) -> Option<Vec<u8>>
+     // Preview/PrvImage.png 또는 Preview/PrvImage.* 탐색
+     let entry_name = (0..archive.len()).find_map(|i| {
+         let file = archive.by_index(i).ok()?;
+-        let name = file.name().to_string();
++        let name = file.name().ok()?.into_owned();
+         if name.starts_with("Preview/PrvImage") {
+             Some(name)
+         } else {
+diff --git a/src/serializer/hwpx/mod.rs b/src/serializer/hwpx/mod.rs
+index 1aa05f2b0..8d18173cb 100644
+--- a/src/serializer/hwpx/mod.rs
++++ b/src/serializer/hwpx/mod.rs
+@@ -1609,7 +1609,10 @@ mod tests {
+         // ZIP 파일 목록에 한컴 필수 11개가 모두 있는지 확인
+         let cursor = std::io::Cursor::new(&bytes);
+         let archive = zip::ZipArchive::new(cursor).expect("valid zip");
+-        let names: Vec<String> = archive.file_names().map(String::from).collect();
++        let names: Vec<String> = archive
++            .file_names()
++            .map(|name| name.expect("entry name").into_owned())
++            .collect();
+         let required = [
+             "mimetype",
+             "version.xml",
+@@ -1670,7 +1673,10 @@ mod tests {
+         // ZIP에 BinData 엔트리 존재 확인
+         let cursor = std::io::Cursor::new(&bytes);
+         let archive = zip::ZipArchive::new(cursor).expect("zip");
+-        let names: Vec<String> = archive.file_names().map(String::from).collect();
++        let names: Vec<String> = archive
++            .file_names()
++            .map(|name| name.expect("entry name").into_owned())
++            .collect();
+         assert!(
+             names.iter().any(|n| n.starts_with("BinData/")),
+             "BinData/ ZIP entry missing: {:?}",
+@@ -1776,7 +1782,7 @@ mod tests {
+                 .compression_method(zip::CompressionMethod::Deflated);
+             for i in 0..archive.len() {
+                 let mut f = archive.by_index(i).expect("entry");
+-                let name = f.name().to_string();
++                let name = f.name().expect("entry name").into_owned();
+                 if name.starts_with("BinData/") {
+                     continue;
+                 }
+@@ -1860,8 +1866,8 @@ mod tests {
+         let mut archive = zip::ZipArchive::new(cursor).expect("zip");
+         let bin_name = archive
+             .file_names()
++            .map(|name| name.expect("entry name").into_owned())
+             .find(|name| name.starts_with("BinData/") && name.ends_with(".png"))
+-            .map(String::from)
+             .expect("png BinData entry");
+         let mut bin = archive.by_name(&bin_name).expect("read png BinData");
+         let mut actual = Vec::new();
+@@ -1917,8 +1923,8 @@ mod tests {
+             zip::ZipArchive::new(std::io::Cursor::new(serialized)).expect("roundtrip zip");
+         let section_names: Vec<String> = archive
+             .file_names()
++            .map(|name| name.expect("entry name").into_owned())
+             .filter(|name| name.starts_with("Contents/section") && name.ends_with(".xml"))
+-            .map(String::from)
+             .collect();
+         let mut section_xml = String::new();
+         for name in section_names {
+diff --git a/src/serializer/hwpx/package_check.rs b/src/serializer/hwpx/package_check.rs
+index 9db38e0ae..bf1541793 100644
+--- a/src/serializer/hwpx/package_check.rs
++++ b/src/serializer/hwpx/package_check.rs
+@@ -70,15 +70,32 @@ pub fn check_package(hwpx_bytes: &[u8], doc: &Document) -> PackageCheckReport {
+         }
+     };
+ 
+-    let names: HashSet<String> = archive.file_names().map(String::from).collect();
++    let names: HashSet<String> = match archive
++        .file_names()
++        .map(|name| name.map(|name| name.into_owned()))
++        .collect::<Result<_, _>>()
++    {
++        Ok(names) => names,
++        Err(error) => {
++            report.push(format!("엔트리 이름 읽기 실패: {error}"));
++            return report;
++        }
++    };
+ 
+     // 2. mimetype — 최초 엔트리 + STORED + 내용 일치
+     match archive.by_index(0) {
+         Ok(mut first) => {
+-            if first.name() != "mimetype" {
++            let first_name = match first.name() {
++                Ok(name) => name.into_owned(),
++                Err(error) => {
++                    report.push(format!("첫 엔트리 이름 읽기 실패: {error}"));
++                    return report;
++                }
++            };
++            if first_name != "mimetype" {
+                 report.push(format!(
+                     "mimetype 이 최초 엔트리가 아님 (첫 엔트리: {})",
+-                    first.name()
++                    first_name
+                 ));
+             } else {
+                 if first.compression() != zip::CompressionMethod::Stored {
